@@ -16,9 +16,9 @@ namespace NUnit.VisualStudio.TestAdapter
 {
     public class TestConverter : IDisposable
     {
-        private readonly TestLogger logger;
+        private TestLogger logger;
         private readonly Dictionary<string, TestCase> vsTestCaseMap;
-        private readonly string sourceAssembly;
+        private string sourceAssembly;
         private AppDomain asyncMethodHelperDomain;
 
         #region Constructors
@@ -118,6 +118,9 @@ namespace NUnit.VisualStudio.TestAdapter
             }
             diaSession = null;
             asyncMethodHelperDomain = null;
+            sourceAssembly = null;
+            vsTestCaseMap.Clear();
+            logger = null;
         }
 
         #endregion

@@ -39,61 +39,66 @@ namespace NUnit.VisualStudio.TestAdapter
             {
                 TestLog.SendDebugMessage("Processing " + sourceAssembly);
 
-                ITestRunner runner = GetRunnerFor(sourceAssembly);
-
-                try
+                using (ITestRunner runner = GetRunnerFor(string.Copy(sourceAssembly)))
                 {
-                    XmlNode loadResult = runner.Load();
 
-                    // Currently, this will always be the case but it might change
-                    if (loadResult.Name == "test-run")
-                        loadResult = loadResult.FirstChild;
-
-                    if (loadResult.GetAttribute("runstate") == "Runnable")
+                    try
                     {
-                        XmlNode topNode = runner.Explore(TestFilter.Empty);
+                        XmlNode loadResult = runner.Load();
 
-                        using (var testConverter = new TestConverter(TestLog, sourceAssembly))
+                        // Currently, this will always be the case but it might change
+                        if (loadResult.Name == "test-run")
+                            loadResult = loadResult.FirstChild;
+
+                        if (loadResult.GetAttribute("runstate") == "Runnable")
                         {
-                            int cases = ProcessTestCases(topNode, discoverySink, testConverter);
-                            TestLog.SendDebugMessage(string.Format("Discovered {0} test cases", cases));
+                            XmlNode topNode = runner.Explore(TestFilter.Empty);
+
+                            using (var testConverter = new TestConverter(TestLog, sourceAssembly))
+                            {
+                                int cases = ProcessTestCases(topNode, discoverySink, testConverter);
+                                TestLog.SendDebugMessage(string.Format("Discovered {0} test cases", cases));
+                                
+                            }
+                        }
+                        else
+                        {
+                            TestLog.NUnitLoadError("Discovering: " + sourceAssembly + " w/LoadResult: " + loadResult);
                         }
                     }
-                    else
+                    catch (BadImageFormatException)
                     {
-                        TestLog.NUnitLoadError(sourceAssembly);
+                        // we skip the native c++ binaries that we don't support.
+                        TestLog.AssemblyNotSupportedWarning(sourceAssembly);
                     }
-                }
-                catch (BadImageFormatException)
-                {
-                    // we skip the native c++ binaries that we don't support.
-                    TestLog.AssemblyNotSupportedWarning(sourceAssembly);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    // Either the NUnit framework was not referenced by the test assembly
-                    // or some other error occured. Not a problem if not an NUnit assembly.
-                    TestLog.DependentAssemblyNotFoundWarning(ex.FileName, sourceAssembly);
-                }
-                catch (FileLoadException ex)
-                {
-                    // Attempts to load an invalid assembly, or an assembly with missing dependencies
-                    TestLog.LoadingAssemblyFailedWarning(ex.FileName, sourceAssembly);
-                }
-                catch (TypeLoadException ex)
-                {
-                    if (ex.TypeName == "NUnit.Framework.Api.FrameworkController")
-                        TestLog.SendWarningMessage("   Skipping NUnit 2.x test assembly");
-                    else
+                    catch (FileNotFoundException ex)
+                    {
+                        // Either the NUnit framework was not referenced by the test assembly
+                        // or some other error occured. Not a problem if not an NUnit assembly.
+                        TestLog.DependentAssemblyNotFoundWarning(ex.FileName, sourceAssembly);
+                    }
+                    catch (FileLoadException ex)
+                    {
+                        // Attempts to load an invalid assembly, or an assembly with missing dependencies
+                        TestLog.LoadingAssemblyFailedWarning(ex.FileName, sourceAssembly);
+                    }
+                    catch (TypeLoadException ex)
+                    {
+                        if (ex.TypeName == "NUnit.Framework.Api.FrameworkController")
+                            TestLog.SendWarningMessage("   Skipping NUnit 2.x test assembly");
+                        else
+                            TestLog.SendErrorMessage("Exception thrown discovering tests in " + sourceAssembly, ex);
+                    }
+                    catch (Exception ex)
+                    {
                         TestLog.SendErrorMessage("Exception thrown discovering tests in " + sourceAssembly, ex);
-                }
-                catch (Exception ex)
-                {
-                    TestLog.SendErrorMessage("Exception thrown discovering tests in " + sourceAssembly, ex);
+                    }
+                    runner.Unload();
                 }
             }
-
+            
             Info("discovering test", "finished");
+            Unload();
         }
 
         #endregion

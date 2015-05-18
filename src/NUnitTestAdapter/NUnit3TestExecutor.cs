@@ -200,7 +200,7 @@ namespace NUnit.VisualStudio.TestAdapter
                     }
                 }
                 else
-                    TestLog.NUnitLoadError(assemblyName);
+                    TestLog.NUnitLoadError("Executing: " + assemblyName + " w/LoadResult: " + loadResult);
             }
             catch (BadImageFormatException)
             {
@@ -216,6 +216,8 @@ namespace NUnit.VisualStudio.TestAdapter
             {
                 TestLog.SendErrorMessage("Exception thrown executing tests in " + assemblyName, ex);
             }
+            _testRunner.Unload();
+            TestEngine.Dispose();
         }
 
         private static TestFilter MakeTestFilter(IEnumerable<TestCase> testCases)

@@ -44,11 +44,11 @@ namespace NUnit.VisualStudio.TestAdapter
                 {
                     Assembly entryAssembly = Assembly.GetEntryAssembly();
                     if (entryAssembly != null)
-                        exeName = entryAssembly.Location;
+                        exeName = string.Copy(entryAssembly.Location);
 
                 }
 
-                return exeName == "vstest.executionengine.exe" || exeName == "vstest.discoveryengine.exe";
+                return exeName.Contains("vstest.executionengine") || exeName.Contains("vstest.discoveryengine");
             }
         }
 
@@ -80,6 +80,13 @@ namespace NUnit.VisualStudio.TestAdapter
 
             TestEngine = new TestEngine();
             TestLog = new TestLogger(messageLogger, _verbosity);
+        }
+
+        public void Unload()
+        {
+            TestEngine.Dispose();
+            TestEngine = null;
+            TestLog = null;
         }
 
         protected ITestRunner GetRunnerFor(string assemblyName)

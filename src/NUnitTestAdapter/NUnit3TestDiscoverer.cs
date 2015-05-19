@@ -1,7 +1,6 @@
 ﻿// ****************************************************************
 // Copyright (c) 2011-2015 NUnit Software. All rights reserved.
 // ****************************************************************
-
 //#define LAUNCHDEBUGGER
 
 using System;
@@ -26,21 +25,28 @@ namespace NUnit.VisualStudio.TestAdapter
         public void DiscoverTests(IEnumerable<string> sources, IDiscoveryContext discoveryContext, IMessageLogger messageLogger, ITestCaseDiscoverySink discoverySink)
         {
 #if LAUNCHDEBUGGER
-            Debugger.Launch();
+            Debugger.Launch(); 
 #endif
             Initialize(messageLogger);
+            #if LAUNCHDEBUGGER
+            TestLog.SendInformationalMessage("Enabled debugger");
+#endif
+
 
             Info("discovering tests", "started");
 
             // Ensure any channels registered by other adapters are unregistered
             CleanUpRegisteredChannels();
 
+
             foreach (string sourceAssembly in sources)
             {
-                TestLog.SendDebugMessage("Processing " + sourceAssembly);
-
-                using (ITestRunner runner = GetRunnerFor(string.Copy(sourceAssembly)))
+                var source = string.Copy(sourceAssembly);
+                TestLog.SendDebugMessage("Processing " + source);
+                ITestRunner runner=null;
+                try
                 {
+                    runner = GetRunnerFor(source);
 
                     try
                     {
@@ -54,16 +60,15 @@ namespace NUnit.VisualStudio.TestAdapter
                         {
                             XmlNode topNode = runner.Explore(TestFilter.Empty);
 
-                            using (var testConverter = new TestConverter(TestLog, sourceAssembly))
+                            using (var testConverter = new TestConverter(TestLog, source))
                             {
                                 int cases = ProcessTestCases(topNode, discoverySink, testConverter);
                                 TestLog.SendDebugMessage(string.Format("Discovered {0} test cases", cases));
-                                
                             }
                         }
                         else
                         {
-                            TestLog.NUnitLoadError("Discovering: " + sourceAssembly + " w/LoadResult: " + loadResult);
+                            TestLog.NUnitLoadError("Discovering: " + source + " w/LoadResult: " + loadResult);
                         }
                     }
                     catch (BadImageFormatException)
@@ -93,10 +98,24 @@ namespace NUnit.VisualStudio.TestAdapter
                     {
                         TestLog.SendErrorMessage("Exception thrown discovering tests in " + sourceAssembly, ex);
                     }
-                    runner.Unload();
+                    finally
+                    {
+                        if (runner.IsTestRunning)
+                            runner.StopRun(true);
+
+                    }
+                }
+                finally
+                {
+                    if (runner != null)
+                    {
+                        runner.Unload();
+                        runner.Dispose();
+                    }
                 }
             }
             
+
             Info("discovering test", "finished");
             Unload();
         }

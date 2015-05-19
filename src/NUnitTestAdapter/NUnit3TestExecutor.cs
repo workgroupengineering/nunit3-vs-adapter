@@ -79,6 +79,7 @@ namespace NUnit.VisualStudio.TestAdapter
             }
             finally
             {
+                Unload();
                 Info("executing tests", "finished");
             }
 
@@ -112,8 +113,9 @@ namespace NUnit.VisualStudio.TestAdapter
                 RunAssembly(assemblyName, frameworkHandle);
             }
 
+            
             Info("executing tests", "finished");
-
+            Unload();
         }
 
         void ITestExecutor.Cancel()

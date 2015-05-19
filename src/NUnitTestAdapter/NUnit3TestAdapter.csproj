@@ -92,7 +92,12 @@
     <None Include="NUnitAdapter.snk" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\EngineWrapper\EngineWrapper.csproj">
+      <Project>{374dc82b-156f-4344-bf72-3c22e915687a}</Project>
+      <Name>EngineWrapper</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

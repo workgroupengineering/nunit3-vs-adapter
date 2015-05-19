@@ -60,6 +60,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AppDomainTests.cs" />
     <Compile Include="AssemblyRunnerTests.cs" />
     <Compile Include="AsyncTests.cs" />
     <Compile Include="ExperimentalTests.cs" />
@@ -93,9 +94,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\EngineWrapper\EngineWrapper.csproj">
+      <Project>{374dc82b-156f-4344-bf72-3c22e915687a}</Project>
+      <Name>EngineWrapper</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NUnitTestAdapter\NUnit3TestAdapter.csproj">
       <Project>{8a85e26a-c706-48b1-bc36-06ebde3efd25}</Project>
       <Name>NUnit3TestAdapter</Name>

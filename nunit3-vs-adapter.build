@@ -7,7 +7,7 @@
 
 
     <!-- Set version number for package -->
-    <property name="package.version" value="3.0.1-ctp-2-h6"/>
+    <property name="package.version" value="3.0.1-ctp-2-i1"/>
 
     <!-- Define package name, including version -->
     <property name="package.base.name" value="NUnit3TestAdapter"/>
@@ -57,6 +57,7 @@
 			<fileset basedir="${install.release.dir}">
 				<include name="NUnit3.TestAdapter.dll"/>
         <include name="nunit.core.engine.dll"/>
+        <include name="EngineWrapper.dll"/>
 			</fileset>
 		</copy>
 

@@ -28,7 +28,7 @@ namespace NUnit.VisualStudio.TestAdapter
 
         #region Properties
 
-        protected TestEngine TestEngine { get; private set; }
+        protected ITestEngine TestEngine { get; private set; }
 
         // Our logger used to display messages
         protected TestLogger TestLog { get; private set; }
@@ -78,15 +78,31 @@ namespace NUnit.VisualStudio.TestAdapter
                 messageLogger.SendMessage(TestMessageLevel.Error, e.ToString());
             }
 
-            TestEngine = new TestEngine();
+            TestEngine = CreateTestEngine();
             TestLog = new TestLogger(messageLogger, _verbosity);
         }
+
+        private AppDomain engineDomain;
+
+        ITestEngine CreateTestEngine()
+        {
+            var adsetup = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) };
+
+            var evidence = AppDomain.CurrentDomain.Evidence;
+
+            engineDomain = AppDomain.CreateDomain("TestEngine", evidence, adsetup);
+            var enginewrapperObject = engineDomain.CreateInstanceAndUnwrap(typeof(NUnit.EngineWrapper.TestEngineWrapper).Assembly.FullName,
+                typeof(NUnit.EngineWrapper.TestEngineWrapper).FullName);
+            return enginewrapperObject as ITestEngine;
+        }
+
 
         public void Unload()
         {
             TestEngine.Dispose();
             TestEngine = null;
             TestLog = null;
+            AppDomain.Unload(engineDomain);
         }
 
         protected ITestRunner GetRunnerFor(string assemblyName)

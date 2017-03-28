@@ -32,15 +32,20 @@ namespace NUnit.VisualStudio.TestAdapter
     {
         public static readonly NavigationData Invalid = new NavigationData(null, 0);
 
-        public NavigationData(string filePath, int lineNumber)
+        public NavigationData(string filePath, int lineNumber) : this(filePath, lineNumber, lineNumber) { }
+
+        public NavigationData(string filePath, int minLineNumber, int maxLineNumber)
         {
             FilePath = filePath;
-            LineNumber = lineNumber;
+            LineNumber = minLineNumber;
+            MaxLineNumber = maxLineNumber;
         }
 
-        public string FilePath { get; private set; }
+        public string FilePath { get; internal set; }
 
-        public int LineNumber { get; private set; }
+        public int LineNumber { get; internal set; }
+
+        public int MaxLineNumber { get; internal set; }
 
         public bool IsValid
         {

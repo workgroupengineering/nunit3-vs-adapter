@@ -55,7 +55,10 @@
     <VsixSourceItem Include="$(VsixInputFileLocation)\Mono.Cecil.Rocks.dll" />
     <VsixSourceItem Include="$(VsixInputFileLocation)\nunit.engine.api.dll" />
     <VsixSourceItem Include="$(VsixInputFileLocation)\nunit.engine.dll" />
-    <VsixSourceItem Include="$(VsixInputFileLocation)\NUnit3.TestAdapter.dll" />
+    <Content Include="..\NUnitTestAdapter\bin\Debug\net35\\NUnit3.TestAdapter.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="license.rtf">

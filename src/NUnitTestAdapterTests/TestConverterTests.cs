@@ -199,10 +199,13 @@ namespace NUnit.VisualStudio.TestAdapter.Tests
                 Assert.That(convertedAttachments.Length, Is.GreaterThan(0), "Some converted attachments were expected");
                 Assert.That(convertedAttachments.Length, Is.EqualTo(fakeAttachments.Length), "Attachments are not converted");
             });
+
+            var attachment1 = convertedAttachments.First();
+            Assert.That(attachment1.Description.Length, Is.GreaterThan(0), "Attachment description not present");
         }
 
         [Test]
-        public void Attachments_AllFilePathesStartWithFileScheme()
+        public void Attachments_AllFilePathsStartWithFileScheme()
         {
             const string fileUriScheme = "file://";
             const string errorMessage = "Path must start with file:// uri scheme";

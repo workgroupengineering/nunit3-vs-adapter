@@ -12,8 +12,8 @@ var configuration = Argument("configuration", "Release");
 // SET PACKAGE VERSION
 //////////////////////////////////////////////////////////////////////
 
-var version = "4.1.0";
-var modifier = "";
+var version = "4.2.0";
+var modifier = "-alpha.201";
 
 var dbgSuffix = configuration.ToLower() == "debug" ? "-dbg" : "";
 var packageVersion = version + modifier + dbgSuffix;
@@ -290,15 +290,6 @@ Task("PackageNuGet")
         });
     });
 
-Task("PackageVsix")
-    .IsDependentOn("CreatePackageDir")
-    .Does(() =>
-    {
-        CopyFile(
-            BIN_DIR + "NUnit3TestAdapter.vsix",
-            PACKAGE_DIR + packageName + ".vsix");
-    });
-
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS
 //////////////////////////////////////////////////////////////////////
@@ -315,8 +306,7 @@ Task("Test")
 
 Task("Package")
     .IsDependentOn("PackageZip")
-    .IsDependentOn("PackageNuGet")
-    .IsDependentOn("PackageVsix");
+    .IsDependentOn("PackageNuGet");
 
 Task("QuickRelease")
     .IsDependentOn("Build")

@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
+
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 
@@ -102,7 +103,6 @@ namespace NUnit.VisualStudio.TestAdapter
         bool StopOnError { get; }
         TestOutcome MapWarningTo { get; }
         bool UseTestNameInConsoleOutput { get; }
-        bool FreakMode { get; }
         DisplayNameOptions DisplayName { get; }
         char FullnameSeparator { get; }
         DiscoveryMethod DiscoveryMethod { get; }
@@ -120,6 +120,16 @@ namespace NUnit.VisualStudio.TestAdapter
         void RestoreRandomSeed(string dirname);
 
         bool EnsureAttachmentFileScheme { get; }
+
+        // For Internal Development use
+        bool FreakMode { get; }  // displays metadata instead of real data in Test Explorer
+        bool Debug { get; }
+        bool DebugExecution { get; }
+        bool DebugDiscovery { get; }
+
+        // Filter control
+        ExplicitModeEnum ExplicitMode { get; }
+        bool SkipExecutionWhenNoTests { get; }
     }
 
     public enum VsTestCategoryType
@@ -258,7 +268,8 @@ namespace NUnit.VisualStudio.TestAdapter
 
         public char FullnameSeparator { get; private set; } = ':';
 
-
+        public ExplicitModeEnum ExplicitMode { get; private set; } = ExplicitModeEnum.Strict;
+        public bool SkipExecutionWhenNoTests { get; private set; }
 
 
         #region  NUnit Diagnostic properties
@@ -269,8 +280,12 @@ namespace NUnit.VisualStudio.TestAdapter
         public bool DumpVsInput { get; private set; }
 
         public bool FreakMode { get; private set; }
+        public bool Debug { get; private set; }
+        public bool DebugExecution { get; private set; }
+        public bool DebugDiscovery { get; private set; }
 
         #endregion
+
 
 
 
@@ -323,16 +338,20 @@ namespace NUnit.VisualStudio.TestAdapter
             ShowInternalProperties = GetInnerTextAsBool(nunitNode, nameof(ShowInternalProperties), false);
             UseParentFQNForParametrizedTests = GetInnerTextAsBool(nunitNode, nameof(UseParentFQNForParametrizedTests), false);
             UseNUnitIdforTestCaseId = GetInnerTextAsBool(nunitNode, nameof(UseNUnitIdforTestCaseId), false);
-            ConsoleOut = GetInnerTextAsInt(nunitNode, nameof(ConsoleOut), 1);  // 0 no output to console, 1 : output to console
+            ConsoleOut = GetInnerTextAsInt(nunitNode, nameof(ConsoleOut), 2);  // 0 no output to console, 1 : output to console
             StopOnError = GetInnerTextAsBool(nunitNode, nameof(StopOnError), false);
             UseNUnitFilter = GetInnerTextAsBool(nunitNode, nameof(UseNUnitFilter), true);
             IncludeStackTraceForSuites = GetInnerTextAsBool(nunitNode, nameof(IncludeStackTraceForSuites), true);
-            EnsureAttachmentFileScheme = GetInnerTextAsBool(nunitNode, nameof(IncludeStackTraceForSuites), false);
+            EnsureAttachmentFileScheme = GetInnerTextAsBool(nunitNode, nameof(EnsureAttachmentFileScheme), false);
+            SkipExecutionWhenNoTests = GetInnerTextAsBool(nunitNode, nameof(SkipExecutionWhenNoTests), false);
 
             // Engine settings
             DiscoveryMethod = MapEnum(GetInnerText(nunitNode, nameof(DiscoveryMethod), Verbosity > 0), DiscoveryMethod.Current);
             SkipNonTestAssemblies = GetInnerTextAsBool(nunitNode, nameof(SkipNonTestAssemblies), true);
             AssemblySelectLimit = GetInnerTextAsInt(nunitNode, nameof(AssemblySelectLimit), 2000);
+
+
+            ExplicitMode = MapEnum(GetInnerText(nunitNode, nameof(ExplicitMode), Verbosity > 0), ExplicitModeEnum.Strict);
 
 
             ExtractNUnitDiagnosticSettings(nunitNode);
@@ -393,6 +412,9 @@ namespace NUnit.VisualStudio.TestAdapter
             FreakMode = GetInnerTextAsBool(nunitNode, nameof(FreakMode), false);
             InternalTraceLevel = GetInnerTextWithLog(nunitNode, nameof(InternalTraceLevel), "Off", "Error", "Warning",
                 "Info", "Verbose", "Debug");
+            Debug = GetInnerTextAsBool(nunitNode, nameof(Debug), false);
+            DebugExecution = Debug || GetInnerTextAsBool(nunitNode, nameof(DebugExecution), false);
+            DebugDiscovery = Debug || GetInnerTextAsBool(nunitNode, nameof(DebugDiscovery), false);
         }
 
         private void UpdateTestProperties(XmlDocument doc)
@@ -602,5 +624,11 @@ namespace NUnit.VisualStudio.TestAdapter
 
 
         #endregion
+    }
+
+    public enum ExplicitModeEnum
+    {
+        Strict,
+        Relaxed
     }
 }

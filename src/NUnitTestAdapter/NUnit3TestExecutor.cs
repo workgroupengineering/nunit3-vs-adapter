@@ -21,7 +21,6 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // ***********************************************************************
 
-// #define LAUNCHDEBUGGER
 
 using System;
 using System.Collections.Generic;
@@ -29,8 +28,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
+
 using NUnit.Engine;
 using NUnit.VisualStudio.TestAdapter.Dump;
 using NUnit.VisualStudio.TestAdapter.Internal;
@@ -57,7 +58,8 @@ namespace NUnit.VisualStudio.TestAdapter
 
 
     [ExtensionUri(ExecutorUri)]
-    public sealed class NUnit3TestExecutor : NUnitTestAdapter, ITestExecutor, IDisposable, INUnit3TestExecutor, IExecutionContext
+    public sealed class NUnit3TestExecutor : NUnitTestAdapter, ITestExecutor, IDisposable, INUnit3TestExecutor,
+        IExecutionContext
     {
         #region Properties
 
@@ -96,17 +98,15 @@ namespace NUnit.VisualStudio.TestAdapter
         /// <param name="frameworkHandle">Test log to send results and messages through.</param>
         public void RunTests(IEnumerable<string> sources, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
-#if LAUNCHDEBUGGER
-            if (!Debugger.IsAttached)
-                Debugger.Launch();
-#endif
             Initialize(runContext, frameworkHandle);
+            CheckIfDebug();
             TestLog.Debug("RunTests by IEnumerable<string>");
             InitializeForExecution(runContext, frameworkHandle);
 
             if (Settings.InProcDataCollectorsAvailable && sources.Count() > 1)
             {
-                TestLog.Error("Failed to run tests for multiple assemblies when InProcDataCollectors specified in run configuration.");
+                TestLog.Error(
+                    "Failed to run tests for multiple assemblies when InProcDataCollectors specified in run configuration.");
                 Unload();
                 return;
             }
@@ -119,21 +119,22 @@ namespace NUnit.VisualStudio.TestAdapter
                 var vsTestFilter = VsTestFilterFactory.CreateVsTestFilter(Settings, runContext);
                 filter = builder.ConvertVsTestFilterToNUnitFilter(vsTestFilter);
             }
-            if (filter == null)
-            {
-                filter = builder.FilterByWhere(Settings.Where);
-            }
+
+            filter ??= builder.FilterByWhere(Settings.Where);
 
             foreach (string assemblyName in sources)
             {
                 try
                 {
-                    string assemblyPath = Path.IsPathRooted(assemblyName) ? assemblyName : Path.Combine(Directory.GetCurrentDirectory(), assemblyName);
+                    string assemblyPath = Path.IsPathRooted(assemblyName)
+                        ? assemblyName
+                        : Path.Combine(Directory.GetCurrentDirectory(), assemblyName);
                     RunAssembly(assemblyPath, null, filter);
                 }
                 catch (Exception ex)
                 {
                     if (ex is TargetInvocationException) { ex = ex.InnerException; }
+
                     TestLog.Warning("Exception thrown executing tests", ex);
                 }
             }
@@ -142,7 +143,8 @@ namespace NUnit.VisualStudio.TestAdapter
             Unload();
         }
 
-        private void SetRunTypeByStrings() =>
+        private void SetRunTypeByStrings()
+        {
             RunType = !Settings.DesignMode
                 ? Settings.DiscoveryMethod == DiscoveryMethod.Legacy
                     ? RunType.CommandLineLegacy
@@ -150,30 +152,30 @@ namespace NUnit.VisualStudio.TestAdapter
                         ? RunType.CommandLineCurrentNUnit
                         : RunType.CommandLineCurrentVSTest
                 : RunType.Ide;
+            TestLog.Debug($"Runtype: {RunType}");
+        }
 
         /// <summary>
-        /// Called by the VisualStudio IDE when selected tests are to be run. Never called from TFS Build.
+        /// Called by the VisualStudio IDE when selected tests are to be run. Never called from TFS Build, except (at least 2022, probably also 2019) when vstest.console uses /test: then this is being used.
         /// </summary>
         /// <param name="tests">The tests to be run.</param>
         /// <param name="runContext">The RunContext.</param>
         /// <param name="frameworkHandle">The FrameworkHandle.</param>
         public void RunTests(IEnumerable<TestCase> tests, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
-#if LAUNCHDEBUGGER
-            if (!Debugger.IsAttached)
-                Debugger.Launch();
-#endif
             Initialize(runContext, frameworkHandle);
-            TestLog.Debug("RunTests by IEnumerable<TestCase>");
+            CheckIfDebug();
             InitializeForExecution(runContext, frameworkHandle);
             RunType = RunType.Ide;
+            TestLog.Debug("RunTests by IEnumerable<TestCase>. RunType = Ide");
             var timing = new TimingLogger(Settings, TestLog);
             Debug.Assert(NUnitEngineAdapter != null, "NUnitEngineAdapter is null");
             Debug.Assert(NUnitEngineAdapter.EngineEnabled, "NUnitEngineAdapter TestEngine is null");
             var assemblyGroups = tests.GroupBy(tc => tc.Source);
             if (IsInProcDataCollectorsSpecifiedWithMultipleAssemblies(assemblyGroups))
             {
-                TestLog.Error("Failed to run tests for multiple assemblies when InProcDataCollectors specified in run configuration.");
+                TestLog.Error(
+                    "Failed to run tests for multiple assemblies when InProcDataCollectors specified in run configuration.");
                 Unload();
                 return;
             }
@@ -184,7 +186,9 @@ namespace NUnit.VisualStudio.TestAdapter
                 try
                 {
                     string assemblyName = assemblyGroup.Key;
-                    string assemblyPath = Path.IsPathRooted(assemblyName) ? assemblyName : Path.Combine(Directory.GetCurrentDirectory(), assemblyName);
+                    string assemblyPath = Path.IsPathRooted(assemblyName)
+                        ? assemblyName
+                        : Path.Combine(Directory.GetCurrentDirectory(), assemblyName);
 
                     var filterBuilder = CreateTestFilterBuilder();
                     var filter = filterBuilder.FilterByList(assemblyGroup);
@@ -194,6 +198,7 @@ namespace NUnit.VisualStudio.TestAdapter
                 catch (Exception ex)
                 {
                     if (ex is TargetInvocationException) { ex = ex.InnerException; }
+
                     TestLog.Warning("Exception thrown executing tests", ex);
                 }
 
@@ -205,7 +210,8 @@ namespace NUnit.VisualStudio.TestAdapter
             Unload();
         }
 
-        private bool IsInProcDataCollectorsSpecifiedWithMultipleAssemblies(IEnumerable<IGrouping<string, TestCase>> assemblyGroups)
+        private bool IsInProcDataCollectorsSpecifiedWithMultipleAssemblies(
+            IEnumerable<IGrouping<string, TestCase>> assemblyGroups)
             => Settings.InProcDataCollectorsAvailable && assemblyGroups.Count() > 1;
 
         void ITestExecutor.Cancel()
@@ -247,7 +253,9 @@ namespace NUnit.VisualStudio.TestAdapter
 
             if (VsTestFilter.IsEmpty)
             {
-                if (!(enableShutdown && !runContext.KeepAlive))  // Otherwise causes exception when run as commandline, illegal to enableshutdown when Keepalive is false, might be only VS2012
+                if (!(enableShutdown &&
+                      !runContext
+                          .KeepAlive)) // Otherwise causes exception when run as commandline, illegal to enableshutdown when Keepalive is false, might be only VS2012
                     frameworkHandle.EnableShutdownAfterTestRun = enableShutdown;
             }
 
@@ -256,9 +264,7 @@ namespace NUnit.VisualStudio.TestAdapter
 
         private void RunAssembly(string assemblyPath, IGrouping<string, TestCase> testCases, TestFilter filter)
         {
-            string actionText = Debugger.IsAttached ? "Debugging " : "Running ";
-            string selectionText = filter == null || filter == TestFilter.Empty ? "all" : "selected";
-            TestLog.Info(actionText + selectionText + " tests in " + assemblyPath);
+            LogActionAndSelection(assemblyPath, filter);
             RestoreRandomSeed(assemblyPath);
             Dump = DumpXml.CreateDump(assemblyPath, testCases, Settings);
 
@@ -277,14 +283,19 @@ namespace NUnit.VisualStudio.TestAdapter
                 {
                     var discovery = new DiscoveryConverter(TestLog, Settings);
                     discovery.Convert(discoveryResults, assemblyPath);
-                    var ea = ExecutionFactory.Create(this);
-                    ea.Run(filter, discovery, this);
+                    if (!Settings.SkipExecutionWhenNoTests || discovery.AllTestCases.Any())
+                    {
+                        var ea = ExecutionFactory.Create(this);
+                        ea.Run(filter, discovery, this);
+                    }
+                    else
+                    {
+                        TestLog.InfoNoTests(assemblyPath);
+                    }
                 }
                 else
                 {
-                    TestLog.Info(discoveryResults.HasNoNUnitTests
-                            ? "   NUnit couldn't find any tests in " + assemblyPath
-                            : "   NUnit failed to load " + assemblyPath);
+                    TestLog.InfoNoTests(discoveryResults.HasNoNUnitTests, assemblyPath);
                 }
             }
             catch (Exception ex) when (ex is BadImageFormatException || ex.InnerException is BadImageFormatException)
@@ -295,7 +306,8 @@ namespace NUnit.VisualStudio.TestAdapter
             catch (FileNotFoundException ex)
             {
                 // Probably from the GetExportedTypes in NUnit.core, attempting to find an assembly, not a problem if it is not NUnit here
-                TestLog.Warning("   Dependent Assembly " + ex.FileName + " of " + assemblyPath + " not found. Can be ignored if not an NUnit project.");
+                TestLog.Warning("   Dependent Assembly " + ex.FileName + " of " + assemblyPath +
+                                " not found. Can be ignored if not an NUnit project.");
             }
             catch (Exception ex)
             {
@@ -315,12 +327,18 @@ namespace NUnit.VisualStudio.TestAdapter
                     // can happen if CLR throws CannotUnloadAppDomainException, for example
                     // due to a long-lasting operation in a protected region (catch/finally clause).
                     if (ex is TargetInvocationException) { ex = ex.InnerException; }
+
                     TestLog.Warning($"   Exception thrown unloading tests from {assemblyPath}", ex);
                 }
             }
         }
 
-
+        private void LogActionAndSelection(string assemblyPath, TestFilter filter)
+        {
+            string actionText = Debugger.IsAttached ? "Debugging " : "Running ";
+            string selectionText = filter == null || filter == TestFilter.Empty ? "all" : "selected";
+            TestLog.Info(actionText + selectionText + " tests in " + assemblyPath);
+        }
 
 
         private void RestoreRandomSeed(string assemblyPath)
@@ -331,12 +349,7 @@ namespace NUnit.VisualStudio.TestAdapter
         }
 
 
-        private NUnitTestFilterBuilder CreateTestFilterBuilder()
-        {
-            return new (NUnitEngineAdapter.GetService<ITestFilterService>(), Settings);
-        }
-
-
+        private NUnitTestFilterBuilder CreateTestFilterBuilder() => new (NUnitEngineAdapter.GetService<ITestFilterService>(), Settings);
 
 
         private void CreateTestOutputFolder()
@@ -370,5 +383,13 @@ namespace NUnit.VisualStudio.TestAdapter
         }
 
         public IDumpXml Dump { get; private set; }
+
+        private void CheckIfDebug()
+        {
+            if (!Settings.DebugExecution)
+                return;
+            if (!Debugger.IsAttached)
+                Debugger.Launch();
+        }
     }
 }
